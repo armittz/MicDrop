@@ -1,0 +1,7 @@
+{
+  "name": "OpenMic - ESL Confidence Builder",
+  "description": "A low-pressure environment for ESL students to practice speaking, track micro-wins, and receive gentle AI-powered encouragement and suggestions.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
