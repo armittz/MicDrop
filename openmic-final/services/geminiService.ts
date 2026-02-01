@@ -1,5 +1,5 @@
 import { GoogleGenAI, Modality } from "@google/genai";
-import { AIFeedback } from "../types";
+import { AIFeedback, PowerWordsRephrases } from "../types";
 import { FEEDBACK_SYSTEM_INSTRUCTION } from "../constants";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -64,6 +64,64 @@ Student transcript (USE EXACTLY):
   }
 
   return parsed as AIFeedback;
+};
+
+/**
+ * Given a transcript, return two attention-grabbing "power words" and
+ * two "perfect rephrases"—short alternate phrasings the student can use.
+ */
+export const getPowerWordsAndRephrases = async (
+  transcript: string
+): Promise<PowerWordsRephrases> => {
+  const prompt = `Analyze the following transcript and return a JSON object with two arrays: \n1) \"powerWords\" - two concise, high-impact words or short phrases that capture the strongest ideas or emotional hooks in the transcript, and 2) \"rephrases\" - two polished, natural alternate phrasings (one sentence each) that a speaker could use to say the same idea more clearly or powerfully. Return ONLY valid JSON.\n\nTranscript (use exactly):\n"${transcript}"\n`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ],
+    config: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  const raw = response.text;
+  if (!raw) {
+    throw new Error("Gemini returned empty response for power words");
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    // If the model returned text with surrounding explanation, try to extract JSON block
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error("Unable to parse Gemini JSON for power words");
+    }
+  }
+
+  // Normalize and validate
+  const powerWords = Array.isArray(parsed.powerWords)
+    ? parsed.powerWords.slice(0, 2).map(String)
+    : [];
+  const rephrases = Array.isArray(parsed.rephrases)
+    ? parsed.rephrases.slice(0, 2).map(String)
+    : [];
+
+  // Ensure two items each (pad with empty strings if necessary)
+  while (powerWords.length < 2) powerWords.push("");
+  while (rephrases.length < 2) rephrases.push("");
+
+  return { powerWords, rephrases } as PowerWordsRephrases;
 };
 
 /**

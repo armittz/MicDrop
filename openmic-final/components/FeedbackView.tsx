@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AIFeedback } from '../types';
-import { generateSpeech } from '../services/geminiService';
+import { generateSpeech, getPowerWordsAndRephrases } from '../services/geminiService';
 import {
   Lightbulb,
   BookOpen,
@@ -32,6 +32,9 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({
   const [isPlayingUser, setIsPlayingUser] = useState(false);
   const [isPlayingAI, setIsPlayingAI] = useState(false);
   const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
+  const [powerWords, setPowerWords] = useState<string[] | null>(null);
+  const [rephrases, setRephrases] = useState<string[] | null>(null);
+  const [isLoadingPower, setIsLoadingPower] = useState(false);
 
   const audioRefUser = React.useRef<HTMLAudioElement | null>(null);
 
@@ -78,6 +81,35 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({
       setIsPlayingAI(false);
     }
   };
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      if (feedback.status !== 'success' || !transcript) return;
+      setIsLoadingPower(true);
+      try {
+        const res = await getPowerWordsAndRephrases(transcript);
+        if (!mounted) return;
+        setPowerWords(res.powerWords);
+        setRephrases(res.rephrases);
+      } catch (err) {
+        console.error('Power words fetch failed', err);
+        if (mounted) {
+          setPowerWords(null);
+          setRephrases(null);
+        }
+      } finally {
+        if (mounted) setIsLoadingPower(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [feedback.status, transcript]);
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-12">
@@ -150,16 +182,23 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({
         <div className="grid md:grid-cols-2 gap-6">
           {/* Rephrases */}
           <div className="bg-slate-900 rounded-3xl p-6">
-            <h4 className="flex items-center gap-2 mb-4">
-              <Lightbulb /> 2 Ways to Rephrase
-            </h4>
+              <h4 className="flex items-center gap-2 mb-4">
+                <Lightbulb /> 2 Ways to Rephrase
+              </h4>
 
-            {feedback.alternatives?.map((alt, i) => (
-              <div key={i} className="flex gap-2 mb-3">
-                <CheckCircle2 />
-                <span>{alt}</span>
-              </div>
-            ))}
+              {isLoadingPower ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="animate-spin" /> Generating...
+                </div>
+              ) : (
+                (rephrases && rephrases.length > 0 ? rephrases : feedback.alternatives ?? [])
+                  .map((alt, i) => (
+                    <div key={i} className="flex gap-2 mb-3">
+                      <CheckCircle2 />
+                      <span>{alt}</span>
+                    </div>
+                  ))
+              )}
           </div>
 
           {/* Vocabulary */}
@@ -168,13 +207,18 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({
               <BookOpen /> 2 Power Words
             </h4>
 
-            {feedback.vocabulary?.map((v, i) => (
-              <div key={i} className="mb-4">
-                <strong>{v.word}</strong>
-                <p>{v.definition}</p>
-                <em>"{v.example}"</em>
+            {isLoadingPower ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="animate-spin" /> Generating...
               </div>
-            ))}
+            ) : (
+              (powerWords && powerWords.length > 0 ? powerWords : (feedback.vocabulary ?? []).map(v => v.word))
+                .map((w, i) => (
+                  <div key={i} className="mb-4">
+                    <strong>{w}</strong>
+                  </div>
+                ))
+            )}
           </div>
         </div>
       )}

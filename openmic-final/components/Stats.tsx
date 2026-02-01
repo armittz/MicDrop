@@ -14,6 +14,32 @@ const Stats: React.FC<StatsProps> = ({ progress }) => {
     val: val
   }));
 
+  // Aggregate power words (from feedback.vocabulary[].word) and rephrases (from feedback.alternatives)
+  const wordCounts = new Map<string, number>();
+  const rephraseCounts = new Map<string, number>();
+
+  progress.practiceSessions.forEach((s) => {
+    s.feedback?.vocabulary?.forEach((v) => {
+      const w = v.word?.trim();
+      if (!w) return;
+      wordCounts.set(w, (wordCounts.get(w) || 0) + 1);
+    });
+
+    s.feedback?.alternatives?.forEach((alt) => {
+      const a = alt?.trim();
+      if (!a) return;
+      rephraseCounts.set(a, (rephraseCounts.get(a) || 0) + 1);
+    });
+  });
+
+  const topWords = Array.from(wordCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const topRephrases = Array.from(rephraseCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-6">
@@ -113,6 +139,46 @@ const Stats: React.FC<StatsProps> = ({ progress }) => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-slate-900 rounded-[2rem] p-8 shadow-xl border-b-4 border-slate-800">
+          <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Top Power Words</h4>
+          {topWords.length === 0 ? (
+            <p className="text-sm text-slate-500 italic">No power words yet — practice to generate vocabulary.</p>
+          ) : (
+            <div className="space-y-3">
+              {topWords.map(([word, count], i) => (
+                <div key={i} className="flex items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  <div>
+                    <p className="font-bold text-slate-200">{word}</p>
+                    <p className="text-xs text-slate-500">Appeared in {count} session{count > 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">{count}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-900 rounded-[2rem] p-8 shadow-xl border-b-4 border-slate-800">
+          <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Top Rephrases</h4>
+          {topRephrases.length === 0 ? (
+            <p className="text-sm text-slate-500 italic">No rephrases yet — practice to collect suggestions.</p>
+          ) : (
+            <div className="space-y-3">
+              {topRephrases.map(([text, count], i) => (
+                <div key={i} className="flex items-start justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  <div className="truncate pr-4">
+                    <p className="font-bold text-slate-200 text-sm truncate">{text}</p>
+                    <p className="text-xs text-slate-500">Suggested in {count} session{count > 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">{count}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -28,6 +28,11 @@ export interface AIFeedback {
   status: 'success' | 'empty' | 'too_short';
 }
 
+export interface PowerWordsRephrases {
+  powerWords: string[]; // exactly 2 items
+  rephrases: string[]; // exactly 2 items
+}
+
 export interface Level {
   id: string;
   title: string;
