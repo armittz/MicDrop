@@ -12,7 +12,7 @@ Speaking can be stressful — MicDrop is designed to make practice feel low-pres
 - Vocabulary saving (personal mini-dictionary)
 
 ## Tech Stack
-- Front end: React (TypeScript optional)
+- Front end: React, TypeScript
 - Styling: Tailwind CSS
 - AI: Gemini API 
 
